@@ -13,6 +13,7 @@ import (
  "github.com/asunavlr/saas-starter/internal/billing"
  "github.com/asunavlr/saas-starter/internal/projects"
  "github.com/google/uuid"
+ "github.com/go-chi/chi/v5"
 )
 
 type Handlers struct { DB *sql.DB; Secret []byte; TokenTTL time.Duration; Projects projects.Repository; Audit audit.Repository }
@@ -57,6 +58,6 @@ func(h Handlers) CreateProject(w http.ResponseWriter,r *http.Request){
  _=h.Audit.Record(r.Context(),Org(r.Context()),User(r.Context()),"project.created","project",p.ID,map[string]any{"name":p.Name})
  writeJSON(w,201,map[string]any{"data":p})
 }
-func(h Handlers) DeleteProject(w http.ResponseWriter,r *http.Request){id:=r.PathValue("id");err:=h.Projects.Delete(r.Context(),Org(r.Context()),id);if errors.Is(err,sql.ErrNoRows){writeJSON(w,404,map[string]string{"error":"project not found"});return};if err!=nil{writeJSON(w,400,map[string]string{"error":err.Error()});return};_=h.Audit.Record(r.Context(),Org(r.Context()),User(r.Context()),"project.deleted","project",id,nil);w.WriteHeader(http.StatusNoContent)}
+func(h Handlers) DeleteProject(w http.ResponseWriter,r *http.Request){id:=chi.URLParam(r,"id");err:=h.Projects.Delete(r.Context(),Org(r.Context()),id);if errors.Is(err,sql.ErrNoRows){writeJSON(w,404,map[string]string{"error":"project not found"});return};if err!=nil{writeJSON(w,400,map[string]string{"error":err.Error()});return};_=h.Audit.Record(r.Context(),Org(r.Context()),User(r.Context()),"project.deleted","project",id,nil);w.WriteHeader(http.StatusNoContent)}
 func(h Handlers) Me(w http.ResponseWriter,r *http.Request){var name,email string;if err:=h.DB.QueryRowContext(r.Context(),`SELECT name,email FROM users WHERE id=$1`,User(r.Context())).Scan(&name,&email);err!=nil{writeJSON(w,404,map[string]string{"error":"user not found"});return};writeJSON(w,200,map[string]string{"id":User(r.Context()),"name":name,"email":email})}
 func writeJSON(w http.ResponseWriter,status int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(v)}
