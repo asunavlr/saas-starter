@@ -13,7 +13,7 @@ A multi-tenant SaaS backend foundation built with **Go, PostgreSQL and Redis**. 
 - **Audit trail:** project creation/deletion events with tenant, actor, resource and metadata; tenant-scoped audit history endpoint.
 - **Billing foundation:** subscription status and plan entitlement overview. No payment provider is connected.
 - **Rate limiting:** Redis fixed-window IP limiter with a process-local fallback for development.
-- **Operations:** PostgreSQL migrations, Docker Compose, liveness/readiness probes, request IDs, structured request logging and graceful shutdown.
+- **Operations:** PostgreSQL migrations, Docker Compose, liveness/readiness probes, request IDs, request logging and graceful shutdown.
 
 ## Architecture
 
