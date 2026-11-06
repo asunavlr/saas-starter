@@ -6,6 +6,7 @@ import (
  "errors"
  "net/http"
  "strings"
+ "time"
 
  "github.com/asunavlr/saas-starter/internal/audit"
  "github.com/asunavlr/saas-starter/internal/auth"
@@ -14,8 +15,7 @@ import (
  "github.com/google/uuid"
 )
 
-type Handlers struct { DB *sql.DB; Secret []byte; TokenTTL duration; Projects projects.Repository; Audit audit.Repository }
-type duration interface { String() string }
+type Handlers struct { DB *sql.DB; Secret []byte; TokenTTL time.Duration; Projects projects.Repository; Audit audit.Repository }
 type credentials struct { Name string `json:"name"`; Email string `json:"email"`; Password string `json:"password"` }
 func(h Handlers) Register(w http.ResponseWriter,r *http.Request){
  var in credentials;if err:=json.NewDecoder(r.Body).Decode(&in);err!=nil{writeJSON(w,400,map[string]string{"error":"invalid JSON"});return}
@@ -32,10 +32,9 @@ func(h Handlers) Register(w http.ResponseWriter,r *http.Request){
  if err==nil{_,err=tx.ExecContext(r.Context(),`INSERT INTO subscriptions(organization_id,plan,status) VALUES($1,'free','active')`,orgID)}
  if err!=nil{writeJSON(w,500,map[string]string{"error":"could not create workspace"});return}
  if err=tx.Commit();err!=nil{writeJSON(w,500,map[string]string{"error":"could not commit registration"});return}
- token,err:=auth.IssueToken(userID,h.Secret,parseTTL(h.TokenTTL.String()));if err!=nil{writeJSON(w,500,map[string]string{"error":"could not issue token"});return}
+ token,err:=auth.IssueToken(userID,h.Secret,h.TokenTTL);if err!=nil{writeJSON(w,500,map[string]string{"error":"could not issue token"});return}
  writeJSON(w,201,map[string]any{"access_token":token,"token_type":"Bearer","user":map[string]string{"id":userID,"name":in.Name,"email":in.Email},"organization":map[string]string{"id":orgID,"name":in.Name+"'s workspace","role":"owner"},"plan":"free"})
 }
-func parseTTL(s string) time.Duration { d,err:=time.ParseDuration(s);if err!=nil{return 15*time.Minute};return d }
 func(h Handlers) Login(w http.ResponseWriter,r *http.Request){
  var in credentials;if err:=json.NewDecoder(r.Body).Decode(&in);err!=nil{writeJSON(w,400,map[string]string{"error":"invalid JSON"});return}
  var id,name,email,hash string
