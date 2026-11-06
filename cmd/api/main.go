@@ -31,7 +31,7 @@ func main(){
  r.Route("/v1",func(v chi.Router){
   v.Post("/auth/register",h.Register);v.Post("/auth/login",h.Login)
   v.Group(func(a chi.Router){a.Use(mw.Auth);a.Get("/me",h.Me)
-   a.Group(func(t chi.Router){t.Use(mw.Tenant);t.Get("/projects",h.ListProjects);t.With(httpx.RequireWrite).Post("/projects",h.CreateProject);t.With(httpx.RequireWrite).Delete("/projects/{id}",h.DeleteProject)})
+   a.Group(func(t chi.Router){t.Use(mw.Tenant);t.Get("/projects",h.ListProjects);t.With(httpx.RequireWrite).Post("/projects",h.CreateProject);t.With(httpx.RequireWrite).Delete("/projects/{id}",h.DeleteProject);t.With(httpx.RequireWrite).Get("/audit-events",h.ListAuditEvents);t.With(httpx.RequireWrite).Get("/billing",h.BillingOverview)})
   })
  })
  srv:=&http.Server{Addr:cfg.HTTPAddr,Handler:r,ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:30*time.Second,IdleTimeout:60*time.Second}
