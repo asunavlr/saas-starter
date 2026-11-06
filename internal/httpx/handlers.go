@@ -41,7 +41,7 @@ func(h Handlers) Login(w http.ResponseWriter,r *http.Request){
  var id,name,email,hash string
  err:=h.DB.QueryRowContext(r.Context(),`SELECT id,name,email,password_hash FROM users WHERE email=$1`,strings.ToLower(strings.TrimSpace(in.Email))).Scan(&id,&name,&email,&hash)
  if err!=nil||!auth.CheckPassword(hash,in.Password){writeJSON(w,401,map[string]string{"error":"invalid email or password"});return}
- token,err:=auth.IssueToken(id,h.Secret,parseTTL(h.TokenTTL.String()));if err!=nil{writeJSON(w,500,map[string]string{"error":"could not issue token"});return}
+ token,err:=auth.IssueToken(id,h.Secret,h.TokenTTL);if err!=nil{writeJSON(w,500,map[string]string{"error":"could not issue token"});return}
  rows,err:=h.DB.QueryContext(r.Context(),`SELECT o.id,o.name,m.role,o.plan FROM organizations o JOIN memberships m ON m.organization_id=o.id WHERE m.user_id=$1 ORDER BY o.created_at`,id)
  if err!=nil{writeJSON(w,500,map[string]string{"error":"could not load organizations"});return};defer rows.Close()
  orgs:=[]map[string]string{};for rows.Next(){var oid,oname,role,plan string;if rows.Scan(&oid,&oname,&role,&plan)==nil{orgs=append(orgs,map[string]string{"id":oid,"name":oname,"role":role,"plan":plan})}}
