@@ -61,3 +61,17 @@ func(h Handlers) CreateProject(w http.ResponseWriter,r *http.Request){
 func(h Handlers) DeleteProject(w http.ResponseWriter,r *http.Request){id:=chi.URLParam(r,"id");err:=h.Projects.Delete(r.Context(),Org(r.Context()),id);if errors.Is(err,sql.ErrNoRows){writeJSON(w,404,map[string]string{"error":"project not found"});return};if err!=nil{writeJSON(w,400,map[string]string{"error":err.Error()});return};_=h.Audit.Record(r.Context(),Org(r.Context()),User(r.Context()),"project.deleted","project",id,nil);w.WriteHeader(http.StatusNoContent)}
 func(h Handlers) Me(w http.ResponseWriter,r *http.Request){var name,email string;if err:=h.DB.QueryRowContext(r.Context(),`SELECT name,email FROM users WHERE id=$1`,User(r.Context())).Scan(&name,&email);err!=nil{writeJSON(w,404,map[string]string{"error":"user not found"});return};writeJSON(w,200,map[string]string{"id":User(r.Context()),"name":name,"email":email})}
 func writeJSON(w http.ResponseWriter,status int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(v)}
+
+func(h Handlers) ListAuditEvents(w http.ResponseWriter,r *http.Request){
+ items,err:=h.Audit.List(r.Context(),Org(r.Context()))
+ if err!=nil{writeJSON(w,500,map[string]string{"error":"could not list audit events"});return}
+ writeJSON(w,200,map[string]any{"data":items})
+}
+func(h Handlers) BillingOverview(w http.ResponseWriter,r *http.Request){
+ var plan,status string
+ var periodEnd sql.NullString
+ err:=h.DB.QueryRowContext(r.Context(),`SELECT plan,status,current_period_end::text FROM subscriptions WHERE organization_id=$1`,Org(r.Context())).Scan(&plan,&status,&periodEnd)
+ if err!=nil{writeJSON(w,404,map[string]string{"error":"subscription not found"});return}
+ entitlements:=billing.Get(plan)
+ writeJSON(w,200,map[string]any{"plan":entitlements,"status":status,"current_period_end":periodEnd.String,"payment_provider_connected":false})
+}
